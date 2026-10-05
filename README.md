@@ -18,7 +18,8 @@ management dashboards.
 
 📊 [Excel workbook](Project.xlsx)  
 📘 [KPI dictionary](docs/kpi-dictionary.md)  
-🎯 [Operations priority framework](docs/operations-priority-framework.md)
+🎯 [Operations priority framework](docs/operations-priority-framework.md)  
+🧭 [Excel dashboard alignment checklist](docs/excel-dashboard-alignment.md)
 
 ---
 
