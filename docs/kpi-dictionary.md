@@ -1,272 +1,262 @@
 # KPI Dictionary & Logic
-## Delivery Operations & SLA Performance Analytics — Excel
+## Delivery Operations & SLA Diagnostic — Excel
 
-This document standardizes the KPI logic used to interpret the workbook. The main
-goal is to prevent denominator mixing between **order lifecycle status** metrics and
-**delivery SLA** metrics.
+This document defines the canonical metrics used by the rebuilt workbook.
 
----
-
-## 1. Order population
-
-### Total Orders
-
-**Definition**
-
-Distinct order records in the source dataset.
-
-**Current result**
-
-- 49,996 unique orders
-
-**Denominator role**
-
-Use Total Orders for lifecycle-status rates such as completion, cancellation,
-delivering, and processing.
+The most important design choice is to separate **order lifecycle** from **delivery SLA outcome**.
 
 ---
 
-## 2. Lifecycle status KPIs
+## 1. Analytical grain
 
-The four lifecycle statuses are treated as mutually exclusive in the current
-dashboard.
+- 49,996 source rows
+- 49,996 distinct `order_id`
+- duplicate order IDs: 0
 
-| KPI | Numerator | Denominator | Current result |
-| --- | --- | --- | ---: |
-| Completion Rate | Completed orders | Total Orders | 80.16% |
-| Cancellation Rate | Canceled orders | Total Orders | 6.84% |
-| Delivering Rate | Delivering orders | Total Orders | 9.03% |
-| Processing Rate | Processing orders | Total Orders | 3.96% |
+Therefore the analytical grain is:
 
-The corresponding counts are:
-
-- Completed: 40,077
-- Canceled: 3,422
-- Delivering: 4,515
-- Processing: 1,982
-
-These counts sum to 49,996, so the four status rates sum to approximately 100%.
-
-### Important interpretation
-
-A canceled or still-processing order should **not** automatically enter an
-on-time/late-delivery denominator because it does not yet have a comparable final
-delivery outcome.
+> **one row = one order**
 
 ---
 
-## 3. Delivery SLA KPIs
+## 2. Lifecycle KPIs
 
-### SLA-Eligible Delivered Orders
+Lifecycle status comes from the raw `status` field.
 
-For on-time/late analysis, use only orders with the timestamps required to compare
-actual delivery against the promised/estimated delivery date.
+| KPI | Definition | Current result |
+| --- | --- | ---: |
+| Total Orders | all order records | 49,996 |
+| Completed Orders | status in `success` or `late` | 40,077 |
+| Completion Rate | Completed / Total | 80.16% |
+| Canceled Orders | status = `canceled` | 3,422 |
+| Cancellation Rate | Canceled / Total | 6.84% |
+| Delivering Orders | status = `delivering` | 4,515 |
+| Delivering Rate | Delivering / Total | 9.03% |
+| Processing Orders | status = `processing` | 1,982 |
+| Processing Rate | Processing / Total | 3.96% |
 
-This population is conceptually different from Total Orders.
-
-### On-Time Delivery Rate
-
-**Definition**
-
-Delivered orders meeting the promised/estimated delivery date divided by
-SLA-eligible delivered orders.
-
-**Current dashboard result**
-
-- 60.37%
-
-### Late Delivery Rate
-
-**Definition**
-
-Delivered orders exceeding the promised/estimated delivery date divided by
-SLA-eligible delivered orders.
-
-**Current dashboard result**
-
-- 39.63%
-
-### Reconciliation check
-
-For the same filter context:
+Reconciliation:
 
 ```text
-On-Time Delivery Rate + Late Delivery Rate ≈ 100%
+Completed + Canceled + Delivering + Processing = 49,996
 ```
 
-The current dashboard shows:
+---
+
+## 3. SLA eligibility
+
+An order is SLA-eligible when:
+
+1. it has reached a completed lifecycle outcome,
+2. actual delivery timestamp exists,
+3. estimated/promised delivery timestamp exists.
+
+In this dataset all 40,077 completed orders are SLA-eligible.
+
+---
+
+## 4. SLA outcome
+
+### On-Time
 
 ```text
-60.37% + 39.63% = 100%
+actual delivery <= estimated delivery
 ```
 
-This is the main QA check separating SLA rates from lifecycle-status rates.
+Result:
 
-### Do not use
+- 20,265 orders
+- **50.57%**
+
+### Late
 
 ```text
-Late orders / Total Orders
+actual delivery > estimated delivery
 ```
 
-when the business question is delivery SLA compliance, because canceled,
-processing, and undelivered orders would distort the denominator.
+Result:
 
----
+- 19,812 orders
+- **49.43%**
 
-## 4. Time KPIs
-
-### Average End-to-End Delivery Time
-
-**Definition**
-
-Average elapsed time from purchase to final delivery among orders with an actual
-delivery timestamp.
-
-**Current result**
-
-- 112.61 hours
-- 4.69 days
-
-The Excel formula documented in the project returns blank when the final delivery
-timestamp is missing, so incomplete lifecycle records should not be treated as
-zero-hour deliveries.
-
-### Average Late Duration
-
-**Definition**
-
-Average amount of time beyond the estimated/promised date among **late delivered
-orders only**.
-
-**Current dashboard result**
-
-- approximately 89.79 hours
-
-This should not be averaged across on-time orders as zeros because that answers a
-different business question.
-
----
-
-## 5. Delivery-stage KPIs
-
-Current average stage times:
-
-| Stage | Average time | Share of end-to-end time |
-| --- | ---: | ---: |
-| Confirmation | 6.51 h | 5.8% |
-| Pickup preparation | 12.49 h | 11.1% |
-| Transit | 25.09 h | 22.3% |
-| Shipper / final mile | 68.52 h | 60.8% |
-| End-to-end delivery | 112.61 h | 100% |
-
-### Eligibility rule
-
-A stage-duration average should include only rows with both timestamps required to
-calculate that stage.
-
-For a strict operational comparison, use a common completed-order population with
-all required lifecycle timestamps whenever possible. Otherwise disclose that stage
-averages may use different eligible row counts.
-
-### Interpretation
-
-The final-mile stage is the **largest observed component of lead time**.
-
-This supports prioritizing final-mile diagnostics, but time share alone does not
-prove the underlying root cause.
-
----
-
-## 6. Customer rating KPIs
-
-### Average Customer Rating
-
-**Definition**
-
-Average rating among orders with an observed customer review.
-
-**Current result**
-
-- 5.08 / 10
-
-### Review Coverage
+Reconciliation:
 
 ```text
-18,022 reviewed orders / 49,996 total orders ≈ 36.0%
+On-Time + Late = SLA-Eligible Delivered Orders
+20,265 + 19,812 = 40,077
 ```
 
-Therefore the rating KPI represents the reviewed subset, not the full order base.
+### Why source status is not used for SLA
 
-When presenting customer-feedback insights, disclose the review coverage rather
-than implying that review themes represent every customer.
+QA identified:
 
----
+- 13,233 `success` orders that are late by timestamp
+- 530 `late` orders that are on time by timestamp
 
-## 7. Average Order Value
-
-**Current result**
-
-- 2,521.65
-
-The repository does not document a currency label for this KPI, so do not add a
-currency symbol unless it is verified from the source workbook/data.
-
-The denominator should be orders with a valid order value. If canceled orders
-carry order values in the source, state explicitly whether AOV is based on all
-orders or completed orders.
+Therefore source `status` is retained only as a lifecycle field.
 
 ---
 
-## 8. KPI naming standard
+## 5. Time KPIs
 
-Use management-readable labels on the dashboard:
+### Avg End-to-End Delivery Time
 
-| Current / technical label | Standard label |
-| --- | --- |
-| Orders | Total Orders |
-| Delivery_time | Avg Delivery Time (h) |
-| Late_ratio | Late Delivery Rate |
-| On_time ratio | On-Time Delivery Rate |
-| Canceled_ratio | Cancellation Rate |
-| Delivering ratio | Delivering Rate |
-| Processing ratio | Processing Rate |
-| AVG_Score | Avg Rating (Reviewed Orders) |
-| late_duration | Avg Late Duration (h) |
+```text
+delivery_time - purchase_time
+```
 
-Avoid mixing snake_case / technical field names with presentation labels.
+Population:
+
+> SLA-eligible completed orders
+
+Current result:
+
+- **112.6 hours**
+
+### Avg Late Duration
+
+```text
+delivery_time - estimated_delivery_time
+```
+
+Population:
+
+> late delivered orders only
+
+Current result:
+
+- **57.3 hours**
+
+On-time orders are excluded rather than filled with zero.
 
 ---
 
-## 9. Recommended KPI QA checks
+## 6. Delivery-stage KPIs
 
-For every refresh/filter context:
+Timestamp boundaries:
 
-1. Completed + Canceled + Delivering + Processing = Total Orders.
-2. Lifecycle status rates sum to approximately 100%.
-3. On-Time Rate + Late Rate = approximately 100% within the same SLA-eligible population.
-4. Average Delivery Time excludes rows with missing final delivery timestamps.
-5. Average Late Duration includes only late delivered orders.
-6. Review count ≤ Total Orders and rating is calculated only on observed reviews.
-7. Stage durations are non-negative and use documented timestamp boundaries.
-8. Slicer changes update numerator and denominator together.
+| Stage | Formula concept | Avg |
+| --- | --- | ---: |
+| Confirmation | seller confirmation − purchase | 6.5 h |
+| Pickup | pickup − seller confirmation | 12.5 h |
+| Transit | carrier handoff − pickup | 25.1 h |
+| Final Mile | delivery − carrier handoff | 68.5 h |
+| End-to-End | delivery − purchase | 112.6 h |
+
+All stage averages use the common SLA-eligible completed-order population.
+
+### Late-vs-on-time diagnostic
+
+| Stage | On-Time | Late | Gap |
+| --- | ---: | ---: | ---: |
+| Confirmation | 6.4 h | 6.7 h | +0.3 h |
+| Pickup | 11.9 h | 13.1 h | +1.3 h |
+| Transit | 22.9 h | 27.3 h | +4.4 h |
+| Final Mile | 41.6 h | 96.0 h | +54.4 h |
+| Total | 82.8 h | 143.1 h | +60.4 h |
+
+Final mile accounts for approximately **90% of the observed total lead-time gap**.
 
 ---
 
-## 10. Why the denominator distinction matters
+## 7. Peak-period definition
 
-Two different questions require two different populations:
+Monthly median order volume:
 
-**Operations pipeline**
+- **1,954 orders**
 
-> What share of all orders are completed, canceled, delivering, or processing?
+Peak threshold:
 
-Use **Total Orders**.
+```text
+monthly orders > 1.5 × median
+= 2,931 orders
+```
 
-**Delivery reliability**
+Peak months:
 
-> Of orders that reached a measurable delivery outcome, what share met the promised date?
+- 2022-11
+- 2022-12
+- 2023-01
+- 2023-11
 
-Use **SLA-eligible delivered orders**.
+This rule is data-driven and avoids manually selecting months after seeing the KPI outcome.
 
-Keeping these populations separate makes the dashboard more defensible for
-Operations, Logistics, Supply Chain, and E-commerce interviews.
+---
+
+## 8. Regional / category prioritization
+
+### Severity
+
+Primary severity metric:
+
+> **Late Delivery Rate**
+
+Supporting severity metrics:
+
+- Avg Late Duration
+- Avg Delivery Time
+
+### Exposure
+
+Primary exposure metric:
+
+> **Late Orders**
+
+Supporting exposure metric:
+
+- SLA-eligible volume
+
+Decision-making uses both dimensions rather than ranking by percentage alone.
+
+---
+
+## 9. Review KPIs
+
+Observed reviews:
+
+- 18,022
+
+Review coverage:
+
+```text
+18,022 / 49,996 = 36.0%
+```
+
+Average rating:
+
+- **5.1 / 10**
+
+Rating insights apply only to reviewed orders.
+
+---
+
+## 10. Scenario metric
+
+Illustrative avoided late deliveries:
+
+```text
+SLA-eligible volume × assumed absolute Late Rate improvement
+```
+
+The default workbook input is:
+
+- **5.0 percentage points**
+
+This is a sensitivity calculation, not a forecast.
+
+---
+
+## 11. QA rules
+
+Before publishing refreshed analysis:
+
+1. Total rows = distinct order IDs.
+2. Duplicate order IDs = 0.
+3. Lifecycle counts reconcile to Total Orders.
+4. On-Time + Late = SLA Eligible.
+5. SLA result is timestamp-derived, not source-status-derived.
+6. Stage durations are non-negative.
+7. Completed outcomes have delivery timestamps.
+8. Non-completed outcomes do not have final delivery timestamps.
+9. Review coverage is shown whenever ratings are interpreted.
+10. Scenario outputs are labeled as sensitivity, not forecast.
