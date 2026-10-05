@@ -1,36 +1,90 @@
-# Delivery Performance Analytics Dashboard in Excel
+# Delivery Operations & SLA Performance Analytics — Excel
 
-## Project Overview
+An operations analytics case study built entirely in **Microsoft Excel** to diagnose
+delivery reliability, lifecycle status, process lead time, regional/category risk,
+and peak-period performance across **49,996 orders**.
 
-This project analyzes the operational performance of a delivery company using Microsoft Excel. Starting from a raw order-level dataset, I performed data validation, handled missing values, created analytical features with Excel formulas, summarized the data using PivotTables, and built two interactive dashboards.
+The project is positioned as an **Operations / Supply Chain / E-commerce analytics**
+case—not just an Excel dashboard. The workbook converts order-level timestamps and
+statuses into a standardized KPI layer, PivotTable analysis, and two interactive
+management dashboards.
 
-The project focuses on delivery efficiency, order status, regional performance, product-category performance, customer feedback, and operational bottlenecks.
+> **Period:** May 2022–December 2023  
+> **Orders:** 49,996 unique orders  
+> **Geography:** 62 provinces / 7 economic regions  
+> **Products:** 10 categories / 70 products  
+> **Network:** 999 sellers / 155 shippers / 9,928 customers  
+> **Tool:** Microsoft Excel — Tables, formulas, PivotTables, PivotCharts, slicers, KPI cards
 
-## Business Objectives
+📊 [Excel workbook](Project.xlsx)  
+📘 [KPI dictionary](docs/kpi-dictionary.md)  
+🎯 [Operations priority framework](docs/operations-priority-framework.md)
 
-The analysis was designed to answer the following questions:
+---
 
-- How many orders were completed, canceled, processing, or still being delivered?
-- What is the average end-to-end delivery time?
-- Which delivery stage contributes the most to total lead time?
-- Which regions and product categories have the highest delivery delays?
-- How does operational performance change across months and years?
-- What customer complaints appear most frequently?
-- Which areas should the company prioritize to improve delivery performance?
+## Executive Snapshot
 
-## Dataset
+The dashboard surfaces five operations signals:
 
-The dataset contains **49,996 unique delivery orders** from **May 2022 to December 2023**.
+1. **Lifecycle performance:** 40,077 orders were completed (**80.16%**), while
+   6.84% were canceled and 12.99% remained in delivering/processing statuses.
+2. **Delivery reliability:** among SLA-eligible delivered orders, the dashboard
+   shows **60.37% on-time** and **39.63% late**, with **112.61 hours** average
+   end-to-end delivery time.
+3. **Lead-time concentration:** the shipper / final-mile stage averages **68.52
+   hours**, approximately **60.8%** of the end-to-end delivery cycle.
+4. **Risk is not one-dimensional:** Tây Nguyên and Trung du & miền núi phía Bắc
+   show the highest SLA severity (~65% late and ~171-hour delivery), while high-volume
+   regions such as Đông Nam Bộ generate greater absolute late-order exposure.
+5. **Category priorities differ by severity vs scale:** Sports / Automotive / Garden
+   show the highest late rates, but Fashion / Home / Beauty create more total
+   exposure because their order volumes are much larger.
 
-It includes information about order lifecycle timestamps, order status, customers, sellers, shippers, products, product categories, provinces, economic regions, estimated and actual delivery dates, and customer feedback.
+The key management question therefore becomes:
 
-### Dataset Summary
+> **Where should operations prioritize process improvement when both failure rate
+> and business volume matter?**
 
-| Metric | Value |
-|---|---:|
+---
+
+## Dashboard Preview
+
+### Overview
+
+![Overview dashboard](dashboard_image/overview.png)
+
+### Detail
+
+![Detail dashboard](dashboard_image/detail.png)
+
+---
+
+## Business Questions
+
+The workbook is designed to answer:
+
+1. What share of all orders are completed, canceled, delivering, or processing?
+2. Of orders with a measurable delivery outcome, what share are on time vs late?
+3. Which stage consumes the largest share of end-to-end delivery time?
+4. Which regions combine severe SLA failure with meaningful order volume?
+5. Which product categories have high late rates, and which create the largest
+   absolute late-order exposure?
+6. Do peak-volume periods coincide with weaker operational performance?
+7. Which customer-feedback themes should be connected back to operational failure
+   modes?
+
+---
+
+## Dataset & Analytical Grain
+
+The dataset contains **49,996 unique order IDs** from May 2022 through December 2023.
+
+| Dimension | Coverage |
+| --- | ---: |
 | Orders | 49,996 |
-| Original columns | 24 |
+| Raw columns | 24 |
 | Final columns | 37 |
+| Engineered analytical columns | 13 |
 | Provinces | 62 |
 | Economic regions | 7 |
 | Product categories | 10 |
@@ -38,33 +92,69 @@ It includes information about order lifecycle timestamps, order status, customer
 | Sellers | 999 |
 | Customers | 9,928 |
 | Shippers | 155 |
-| Analysis period | May 2022–December 2023 |
+| Customer reviews | 18,022 |
 
-## Tools and Excel Features
+The analytical grain is **one order per row**.
 
-- Microsoft Excel
+Missing timestamps are not automatically replaced with zero because a blank often
+represents a valid lifecycle state—for example, a canceled order should not be
+treated as having zero delivery time.
+
+---
+
+## Excel Architecture
+
+The workbook demonstrates an Excel-native analytics workflow:
+
+```text
+Raw order-level data
+        ↓
+Data validation
+        ↓
+Excel Table + structured-reference formulas
+        ↓
+13 operational flags / duration fields
+        ↓
+~30 PivotTables
+        ↓
+PivotCharts + slicers
+        ↓
+Overview & Detail dashboards
+```
+
+### Excel features demonstrated
+
 - Excel Tables
-- Structured-reference formulas
-- IF and ISBLANK functions
-- Data filtering and validation
-- PivotTables and PivotCharts
-- Slicers
+- structured-reference formulas
+- date/time arithmetic
+- `IF` / `ISBLANK`
+- binary status flags
+- PivotTables
+- PivotCharts
+- slicers
 - KPI cards
-- Interactive dashboards
+- interactive filtering
+- operations-focused dashboard layout
 
-## Project Workflow
+Example documented delivery-time formula:
 
-### 1. Data Validation and Cleaning
+```excel
+=IF(
+    ISBLANK(data[[#This Row],[delivery_time]]),
+    "",
+    (data[[#This Row],[delivery_time]]
+    -data[[#This Row],[purchase_time]])*24
+)
+```
 
-The raw dataset was reviewed for duplicate order IDs, missing timestamps, missing shipper information, missing customer reviews, inconsistent order statuses, and data-type issues.
+The blank-preserving logic is important: incomplete orders should not enter average
+delivery time as zero-hour deliveries.
 
-All **49,996 order IDs were unique**.
+---
 
-Missing values were not automatically replaced with zero because many blanks represented valid stages in the order lifecycle. For example, canceled orders may not have delivery timestamps, while orders still being delivered do not yet have a final delivery time.
+## Engineered Operations Fields
 
-### 2. Feature Engineering
-
-I created 13 analytical columns to convert raw operational data into measurable KPIs:
+The workbook adds 13 analytical fields:
 
 - `total_delivery_time`
 - `Is_orders`
@@ -80,145 +170,375 @@ I created 13 analytical columns to convert raw operational data into measurable 
 - `shipper_time`
 - `late_duration`
 
-Example formula for calculating total delivery time in hours:
+Binary indicators make status metrics easy to aggregate through PivotTables, while
+stage-duration fields support bottleneck analysis.
 
-```excel
-=IF(
-    ISBLANK(data[[#This Row],[delivery_time]]),
-    "",
-    (data[[#This Row],[delivery_time]]
-    -data[[#This Row],[purchase_time]])*24
-)
-```
+---
 
-Binary indicator columns were created to make order statuses easier to aggregate in PivotTables.
+## Standardized KPI Logic
 
-### 3. Data Aggregation
+A major principle of the rebuild is to **separate lifecycle-status KPIs from
+delivery-SLA KPIs**.
 
-The workbook contains approximately **30 PivotTables** that summarize performance by year, month, economic region, province, product category, product, order status, delivery stage, customer rating, and review description.
+### Lifecycle KPIs — denominator = Total Orders
 
-### 4. Dashboard Development
+| KPI | Count | Rate |
+| --- | ---: | ---: |
+| Completed | 40,077 | 80.16% |
+| Canceled | 3,422 | 6.84% |
+| Delivering | 4,515 | 9.03% |
+| Processing | 1,982 | 3.96% |
+| **Total** | **49,996** | **100%** |
 
-Two interactive Excel dashboards were created.
-
-#### Overview Dashboard
-
-The overview dashboard provides management-level KPIs such as total orders, completion rate, cancellation rate, processing rate, delivering rate, average delivery time, late-delivery ratio, average customer rating, monthly order volume, and regional performance.
-
-#### Detail Dashboard
-
-The detailed dashboard provides deeper analysis of delivery-stage lead times, product-category performance, regional performance, customer review categories, order-status distribution, and monthly operational trends.
-
-The dashboards include slicers for year, month, and economic region.
-
-## Key Performance Indicators
+### Delivery SLA KPIs — denominator = SLA-eligible delivered orders
 
 | KPI | Result |
-|---|---:|
-| Total orders | 49,996 |
-| Completed orders | 40,077 |
-| Completion rate | 80.16% |
-| Canceled orders | 3,422 |
-| Cancellation rate | 6.84% |
-| Delivering orders | 4,515 |
-| Delivering rate | 9.03% |
-| Processing orders | 1,982 |
-| Processing rate | 3.96% |
-| Average total delivery time | 112.61 hours |
-| Average total delivery time | 4.69 days |
-| Average order value | 2,521.65 |
-| Customer reviews | 18,022 |
-| Average customer rating | 5.08/10 |
+| --- | ---: |
+| On-Time Delivery Rate | 60.37% |
+| Late Delivery Rate | 39.63% |
+| Avg End-to-End Delivery Time | 112.61 h / 4.69 d |
+| Avg Late Duration | ~89.79 h |
 
-## Key Findings
+For the same filter context:
 
-### 1. Final-Mile Delivery Was the Main Bottleneck
+```text
+On-Time Rate + Late Rate ≈ 100%
+```
 
-| Delivery Stage | Average Time | Share of Total Time |
-|---|---:|---:|
-| Order confirmation | 6.51 hours | 5.8% |
-| Pickup preparation | 12.49 hours | 11.1% |
-| Transit to carrier | 25.09 hours | 22.3% |
-| Shipper/final-mile delivery | 68.52 hours | 60.8% |
-| Total delivery time | 112.61 hours | 100% |
+Canceled or still-processing orders should not be included in this SLA denominator.
 
-The final-mile delivery stage accounted for approximately **61% of the total delivery cycle**, making it the largest operational bottleneck.
+See the full [KPI dictionary](docs/kpi-dictionary.md).
 
-### 2. Delivery Performance Varied Significantly by Region
+---
 
-| Economic Region | Average Delivery Time | Late Rate Among Delivered Orders |
-|---|---:|---:|
-| Northern Midlands and Mountains | 171.7 hours | 82.2% |
-| Central Highlands | 170.7 hours | 81.8% |
-| North Central Coast | 113.7 hours | 51.0% |
-| South Central Coast | 112.0 hours | 50.0% |
-| Mekong River Delta | 112.0 hours | 48.6% |
-| Southeast | 102.9 hours | 43.9% |
-| Red River Delta | 102.8 hours | 43.9% |
+# Key Findings
 
-Although completion rates were relatively similar across regions, delivery speed and lateness varied considerably. This suggests that regional logistics capacity was a more significant issue than order completion itself.
+## 1. Final mile is the largest observed lead-time component
 
-### 3. Some Product Categories Had Higher Delivery Risk
+| Delivery stage | Avg time | Share of total |
+| --- | ---: | ---: |
+| Confirmation | 6.51 h | 5.8% |
+| Pickup preparation | 12.49 h | 11.1% |
+| Transit | 25.09 h | 22.3% |
+| Shipper / final mile | 68.52 h | 60.8% |
+| **End-to-end** | **112.61 h** | **100%** |
 
-| Product Category | Orders | Average Delivery Time | Late Rate |
-|---|---:|---:|---:|
-| Sports | 1,516 | 157.6 hours | 73.0% |
-| Automotive | 989 | 154.4 hours | 72.7% |
-| Garden | 945 | 155.1 hours | 71.9% |
-| Home | 8,818 | 131.7 hours | 60.8% |
-| Toys | 4,471 | 132.2 hours | 60.7% |
-| Fashion | 13,413 | 100.5 hours | 42.7% |
-| Beauty | 10,384 | 100.3 hours | 42.7% |
-| Electronics | 3,951 | 100.0 hours | 41.2% |
+The final-mile stage accounts for approximately **61%** of end-to-end delivery time.
 
-Sports, Automotive, and Garden products had the highest delivery times and late-delivery rates. A possible explanation is that these categories may contain larger or more difficult-to-handle products, but this hypothesis requires additional data such as product weight and dimensions.
+### Operations interpretation
 
-### 4. Peak Months Were Associated With Lower Performance
+This is the largest time pool to investigate first.
 
-High-volume periods included November 2022, December 2022, January 2023, and November 2023. During these periods, completion rates decreased to approximately 78–79%, cancellation rates increased to nearly 9%, and average delivery time increased to approximately 120–124 hours.
+It does **not** prove that shipper capacity is the root cause. A stronger operational
+diagnostic would compare shipper, route, region, volume, final-mile time, late rate,
+and late duration together.
 
-This pattern suggests that logistics capacity may not have scaled effectively during peak periods.
+---
 
-### 5. Customer Feedback Highlighted Service and Delivery Problems
+## 2. Regional risk must be viewed through both severity and volume
 
-Common negative review themes included poor service, slow delivery, poor packaging, damaged products, broken products, and customers stating that they would not return.
+### SLA-severity hotspots
 
-This indicates that delivery performance and product handling may have directly affected customer experience.
+| Region | Orders | Avg Delivery | Late Rate | Avg Late Duration |
+| --- | ---: | ---: | ---: | ---: |
+| Northern Midlands & Mountains | 2,998 | ~171.7 h | 65.6% | ~140.7 h |
+| Central Highlands | 2,301 | ~170.7 h | 65.1% | ~138.9 h |
+| North Central Coast | 1,297 | ~113.7 h | 41.0% | ~89.2 h |
+| South Central Coast | 6,161 | ~112.0 h | 40.1% | ~88.0 h |
+| Mekong River Delta | 6,126 | ~112.0 h | 39.0% | ~87.3 h |
+| Southeast | 17,389 | ~102.9 h | 35.3% | ~80.0 h |
+| Red River Delta | 13,724 | ~102.8 h | 35.1% | ~83.1 h |
 
-## Business Recommendations
+The two severe regions are far above the network late-rate baseline of **39.63%**.
 
-1. Prioritize final-mile delivery improvements because this stage accounts for most of the total lead time.
-2. Increase delivery capacity and shipper coverage in high-risk regions.
-3. Review delivery processes for Sports, Automotive, Garden, Home, and Toys products.
-4. Improve demand and workforce planning before peak sales months.
-5. Monitor shipper-level performance using delivery time, late rate, and completed-order volume.
-6. Investigate packaging and handling processes for damaged-product complaints.
-7. Separate operational KPIs by order lifecycle stage to ensure fair performance comparisons.
-8. Create alert thresholds for regions, categories, or shippers with unusually high late-delivery rates.
+### But severity is not the same as total operational impact
+
+The Southeast and Red River Delta have much lower late rates, but they also have the
+largest order volumes.
+
+Using displayed rounded rates as a rough prioritization estimate:
+
+```text
+Late delivered orders
+≈ Orders × Completion Rate × Late Rate
+```
+
+suggests approximately:
+
+- **Southeast:** ~4.9k late delivered orders
+- **Red River Delta:** ~3.8k
+- **Northern Midlands & Mountains:** ~1.6k
+- **Central Highlands:** ~1.2k
+
+These are prioritization estimates—not replacements for direct row-level counts.
+
+### Management implication
+
+Use two regional workstreams:
+
+**Severity reduction**
+
+Target the ~65% late-rate regions with route/carrier diagnostics.
+
+**Absolute late-volume reduction**
+
+Target high-volume regions where even a smaller percentage improvement can remove
+many late orders.
+
+---
+
+## 3. Product-category priorities also change when volume is included
+
+### Severity view
+
+| Category | Orders | Avg Delivery | Late Rate | Avg Late Duration |
+| --- | ---: | ---: | ---: | ---: |
+| Sports | 1,516 | 157.6 h | 60.0% | 128.2 h |
+| Automotive | 989 | 154.4 h | 58.2% | 131.7 h |
+| Garden | 945 | 155.1 h | 57.8% | 126.9 h |
+| Toys | 4,471 | 132.2 h | 48.7% | 105.2 h |
+| Home | 8,818 | 131.7 h | 48.4% | 103.7 h |
+| Beauty | 10,384 | 100.3 h | 34.3% | 80.3 h |
+| Fashion | 13,413 | 100.5 h | 34.3% | 78.2 h |
+| Electronics | 3,951 | 100.0 h | 33.3% | 79.3 h |
+| Food | 3,041 | 101.4 h | 34.3% | 78.4 h |
+| Books | 2,466 | 99.7 h | 32.9% | 83.5 h |
+
+Sports, Automotive, and Garden are the strongest **rate-severity signals**.
+
+However, rough exposure estimates indicate that **Fashion, Home, and Beauty** may
+generate more late deliveries in absolute volume.
+
+### Management implication
+
+Use a **Volume × Late Rate** priority matrix instead of ranking categories only by
+percentage.
+
+The current data does not support claiming that size, weight, or handling complexity
+causes these category differences. Those are hypotheses requiring product/route data.
+
+---
+
+## 4. Peak volume coincides with weaker operational performance
+
+High-volume periods identified in the analysis include:
+
+- November 2022
+- December 2022
+- January 2023
+- November 2023
+
+During these periods, the project reports approximately:
+
+| KPI | Peak periods | Network baseline |
+| --- | ---: | ---: |
+| Completion Rate | 78–79% | 80.16% |
+| Cancellation Rate | ~9% | 6.84% |
+| Avg Delivery Time | 120–124 h | 112.61 h |
+
+This supports a **capacity-stress hypothesis**.
+
+It does not prove that demand volume caused the deterioration.
+
+### Management implication
+
+Build a pre-peak capacity review and a weekly exception report comparing:
+
+- order volume
+- completion/cancellation
+- late rate
+- backlog status
+- region
+- category
+- shipper
+
+against historical peak baselines.
+
+---
+
+## 5. Customer feedback is useful but only partially observed
+
+The dataset contains:
+
+- **18,022 reviews**
+- **5.08 / 10** average rating
+- approximately **36.0% review coverage** relative to total orders
+
+Common negative themes include:
+
+- poor service
+- slow delivery
+- poor packaging
+- damaged / broken products
+- customers indicating they would not return
+
+### Management implication
+
+Treat these themes as diagnostic signals, not population-wide causal evidence.
+
+A stronger next analysis should cross-tab feedback themes against:
+
+- late vs on-time delivery
+- late duration
+- region
+- category
+- shipper
+
+to determine whether complaints concentrate around specific operational failures.
+
+---
+
+# Evidence-Driven Action Plan
+
+| Priority | Evidence | Operational action | Success KPI |
+| --- | --- | --- | --- |
+| Final mile | 68.52 h / 60.8% of lead time | build shipper/final-mile scorecard | stage time, late rate, late duration |
+| Severe regions | ~65% late / ~171 h delivery | route & carrier diagnostic | late rate, avg late duration |
+| High-volume regions | highest absolute late exposure | reduce late-order count at scale | late count + rate |
+| Sports / Auto / Garden | ~58–60% late | targeted category/route investigation | category late rate |
+| Fashion / Home / Beauty | high order-volume exposure | prioritize scalable process fixes | absolute late orders |
+| Peak months | 120–124 h delivery / ~9% cancel | pre-peak capacity planning | lead time, cancel rate, backlog |
+| Feedback | 36% review coverage | connect themes to SLA failure modes | rating/theme by SLA status |
+
+See the full [Operations priority framework](docs/operations-priority-framework.md).
+
+---
+
+## Recommended Operations Scorecard
+
+A future workbook iteration should rank region / category / shipper using both:
+
+### Severity
+
+- Late Delivery Rate
+- Avg Late Duration
+- Avg Delivery Time
+
+### Exposure
+
+- Delivered order volume
+- Late order count
+
+A practical priority view is:
+
+```text
+                         HIGH LATE RATE
+                              ↑
+       TARGETED DIAGNOSTIC    |    TOP PRIORITY
+       low volume / high risk | high volume / high risk
+                              |
+LOW VOLUME  ←─────────────────┼─────────────────→ HIGH VOLUME
+                              |
+       MONITOR                |    SCALE EFFICIENCY
+       low volume / low risk  | high volume / moderate risk
+                              ↓
+                         LOW LATE RATE
+```
+
+This avoids prioritizing only the highest percentage or only the largest volume.
+
+---
+
+## Analytical Limitations
+
+### 1. SLA denominators must remain explicit
+
+Lifecycle status rates and delivery SLA rates answer different questions and use
+different eligible populations.
+
+### 2. Stage-time concentration is not causal proof
+
+The final-mile stage is the largest observed component, but the workbook does not
+by itself explain *why* that stage is long.
+
+### 3. Regional/category hypotheses need deeper operational data
+
+Potential drivers such as product dimensions, route distance, carrier capacity, or
+handling requirements are not established by the current dashboard.
+
+### 4. Customer feedback has partial coverage
+
+Only ~36% of total orders have observed reviews.
+
+### 5. Peak-period analysis is observational
+
+Higher volume coincides with weaker KPIs, but that does not establish demand volume
+as the sole cause.
+
+### 6. AOV currency is not documented in the repository
+
+The current workbook reports an average order value of 2,521.65; a currency symbol
+should only be added after source verification.
+
+---
 
 ## Repository Structure
 
 ```text
 delivery-performance-excel-dashboard/
-│
 ├── README.md
 ├── Project.xlsx
-├── dashboard_images/
-│   ├── overview-dashboard.png
-│   └── detail-dashboard.png
-
+├── dashboard_image/
+│   ├── overview.png
+│   └── detail.png
+└── docs/
+    ├── kpi-dictionary.md
+    └── operations-priority-framework.md
 ```
+
+---
 
 ## Skills Demonstrated
 
-- Data cleaning and validation
-- Missing-value analysis
-- Feature engineering
-- Operational KPI development
-- PivotTable analysis
-- Dashboard design
-- Data visualization
-- Business insight generation
-- Data-quality assessment
-- Analytical storytelling
+### Excel
 
+- Excel Tables
+- structured-reference formulas
+- date/time calculations
+- IF / ISBLANK logic
+- PivotTables
+- PivotCharts
+- slicers
+- KPI cards
+- interactive dashboard design
+
+### Operations Analytics
+
+- lifecycle-status KPI design
+- SLA denominator logic
+- lead-time decomposition
+- late-delivery analysis
+- severity vs volume prioritization
+- regional and category diagnostics
+- peak-period monitoring
+- customer-feedback linkage
+- evidence → hypothesis → action → KPI framing
+
+---
+
+## Project Positioning
+
+This project demonstrates how Excel can be used as an operational decision-support
+tool—not only for reporting.
+
+The analysis progresses from:
+
+```text
+Order status
+    ↓
+Delivery reliability
+    ↓
+Lead-time bottleneck
+    ↓
+Region / category severity
+    ↓
+Volume exposure
+    ↓
+Operational priority
+    ↓
+Measurable action
+```
+
+That makes it suitable for **Supply Chain, Operations, Logistics, E-commerce
+Operations, Merchandise, and Data Analyst** roles where Excel remains a core
+decision-making tool.
